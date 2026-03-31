@@ -10,5 +10,5 @@ voice_agent=Agent(
     model=audio_model,
     name="voice_agent",
     description='A helpful voice assistant for user questions.',
-    instruction='Answer user questions to the best of your knowledge',
+    instruction='Answer user questions to the best of your knowledge only in english',
 )

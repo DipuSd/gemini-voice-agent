@@ -1,29 +1,29 @@
 import threading
 import pyaudio
 from google.genai import types
-import audioPlayer
-import numpy as np
 import time
 
 class MicStream:
     def __init__(self, live_queue):
         self.live_queue = live_queue
         self.running = False
+        self.pause_recording = False
         self.pa = pyaudio.PyAudio()
         self.rate = 16000
-        self.chunk = 320
-        self.speaking = False
-        self.silence_threshold = 500
-        self.silence_time = 0.5
-        self.last_speech_time = 0
-
+        self.chunk = 512
+        self.audio_out = self.pa.open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=24000,
+            output=True
+        )
 
     def start(self):
         if self.running:
             return
         self.running = True
 
-        self.stream  = self.pa.open(
+        self.stream = self.pa.open(
             format=pyaudio.paInt16,
             channels=1,
             rate=self.rate,
@@ -37,44 +37,19 @@ class MicStream:
     def stop(self):
         self.running = False
 
+    def set_pause(self, paused: bool):
+        self.pause_recording = paused
+
     def _loop(self):
         while self.running:
+            if self.pause_recording:
+                print("mic paused")
+                time.sleep(0.01)
+                continue
             audio = self.stream.read(self.chunk, exception_on_overflow=False)
-            samples = np.frombuffer(audio, dtype=np.int16)
-            energy = np.abs(samples).mean()
-            now = time.time()
-
-            if energy > self.silence_threshold:
-                if not self.speaking:
-                    self.live_queue.send_activity_start()
-                    self.speaking = True
-                    self.last_speech_time = now
-            elif self.speaking and (now - self.last_speech_time) > self.silence_time:
-                self.live_queue.send_activity_end()
-                self.speaking = False
-
             audio_blob = types.Blob(
                 data=audio,
                 mime_type="audio/pcm;rate=16000"
             )
             self.live_queue.send_realtime(audio_blob)
 
-
-            #
-            # now = time.time()
-            #
-            # if energy > self.silence_threshold:
-            #     print("speaking")
-            #     self.last_speech_time = now
-            #     self.speaking = True
-            #
-            #     audio_blob = types.Blob(
-            #         data=audio,
-            #         mime_type="audio/pcm;rate=16000"
-            #     )
-            #     self.live_queue.send_realtime(audio_blob)
-            # else:
-            #     if self.speaking and (now - self.last_speech_time) > self.silence_duration:
-            #         self.speaking = False
-            #         print("speech ended")
-            #         time.sleep(0.3)

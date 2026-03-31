@@ -1,7 +1,6 @@
 from PySide6.QtWidgets import (
     QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit, QLabel, QApplication)
 from PySide6.QtCore import Qt,Signal
-import sys
 
 class ChatUI(QMainWindow):
     toggle_session_requested = Signal(bool)
